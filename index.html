@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="mn" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>РДМ-22 Ультразвук Дефектоскопийн Бүртгэл ба Шинжилгээ</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            rail: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              border: '#334155',
+              accent: '#38bdf8',
+              warning: '#f59e0b',
+              danger: '#ef4444',
+              success: '#10b981',
+              steel: '#64748b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    .rail-track-pattern {
+      background-size: 40px 100%;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    }
+    .pulsate-danger {
+      animation: pulse-danger 1.5s infinite;
+    }
+    @keyframes pulse-danger {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+    @media print {
+      body { background-color: white !important; color: black !important; }
+      header, .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .border, .border-slate-800, .border-slate-700 { border-color: #cbd5e1 !important; }
+      .bg-slate-900, .bg-slate-950, .bg-slate-800 { background-color: white !important; color: black !important; }
+      .text-slate-100, .text-slate-200, .text-slate-300, .text-slate-400 { color: black !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- Header Section -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-sky-600/20 text-sky-400 rounded-lg border border-sky-500/30">
+          <i class="fa-solid me-1 fa-train-subway text-xl"></i>
+          <i class="fa-solid fa-wave-square text-sm text-yellow-400"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            РДМ-22 ТЭРГЭНЦРИЙН ГЭМТЭЛ БҮРТГЭЛ
+            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">Ультразвук НТД-2024</span>
+          </h1>
+          <p class="text-xs text-slate-400">Төмөр замын жирээний дагуух дотоод болон гадаргуугийн гэмтлийн аналитик систем</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+        <button onclick="openLogImportModal()" class="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 text-xs font-medium rounded-lg border border-sky-500/40 flex items-center gap-1.5 transition shadow-sm">
+          <i class="fa-solid fa-cloud-arrow-up text-sky-400"></i> .RDM Лог оруулах
+        </button>
+        <button onclick="window.print()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-print text-amber-400"></i> Тайлан Хэвлэх
+        </button>
+        <button onclick="exportCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-excel text-emerald-400"></i> CSV
+        </button>
+        <button onclick="exportJSON()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-code text-indigo-400"></i> JSON
+        </button>
+        <button onclick="openNewDefectModal()" class="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg shadow-md hover:shadow-sky-500/20 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-plus"></i> Гэмтэл Нэмэх
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full p-4 space-y-5 flex-1">
+
+    <!-- KPI Summary Dashboard -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Нийт Бүртгэгдсэн Гэмтэл</p>
+          <h3 class="text-2xl font-bold text-white mt-1" id="kpi-total">0</h3>
+          <p class="text-[10px] text-slate-500 mt-0.5">Зүүн: <span id="kpi-left-cnt" class="text-slate-300">0</span> | Баруун: <span id="kpi-right-cnt" class="text-slate-300">0</span></p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20">
+          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-red-900/40 rounded-xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-red-400">Остродефект (ОП/ДП)</p>
+          <h3 class="text-2xl font-bold text-red-500 mt-1" id="kpi-op">0</h3>
+          <p class="text-[10px] text-red-400/70 mt-0.5">Нэн даруй солих шаардлагатай</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/30">
+          <i class="fa-solid fa-radiation text-lg pulsate-danger"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Боолтны Нүхний Гэмтэл (53, 53.1)</p>
+          <h3 class="text-2xl font-bold text-amber-400 mt-1" id="kpi-code53">0</h3>
+          <p class="text-[10px] text-slate-500 mt-0.5">Залгаас/Боолтны нүхний цав</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+          <i class="fa-solid fa-circle-dot text-lg"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-medium text-slate-400">Толгойн Гэмтэл (Код 17)</p>
+          <h3 class="text-2xl font-bold text-indigo-400 mt-1" id="kpi-code17">0</h3>
+          <p class="text-[10px] text-slate-500 mt-0.5">Толгойн хэвтээ ба босоо цав</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+          <i class="fa-solid fa-layer-group text-lg"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visual Track Map Blueprint Section -->
+    <section class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-route text-sky-400"></i> ТӨМӨР ЗАМЫН ЖИРЭЭНИЙ ВИЗУАЛ ЗУРАГ (КМ / ПК / ММ)
+          </h2>
+          <p class="text-xs text-slate-400">Зүүн ба баруун сүм дагуух гэмтлийн байршлын графикийн харагдац</p>
+        </div>
+        
+        <!-- Track Filter controls -->
+        <div class="flex items-center gap-2 text-xs">
+          <label class="text-slate-400">Км харах:</label>
+          <select id="km-filter" onchange="renderTrackBlueprint()" class="bg-slate-800 border border-slate-700 rounded text-slate-200 px-2 py-1 text-xs outline-none focus:border-sky-500">
+            <option value="all">Бүх КМ-ээр</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Rail Track Diagram Canvas / Visual Container -->
+      <div class="relative bg-slate-950 rounded-lg border border-slate-800 p-4 overflow-x-auto custom-scrollbar">
+        <!-- Scale / Picket Markers Header -->
+        <div class="flex justify-between text-[11px] font-mono text-slate-500 mb-2 border-b border-slate-800 pb-1 min-w-[700px]">
+          <span>ПК1 (0-100м)</span>
+          <span>ПК2 (100-200м)</span>
+          <span>ПК3 (200-300м)</span>
+          <span>ПК4 (300-400м)</span>
+          <span>ПК5 (400-500м)</span>
+          <span>ПК6 (500-600м)</span>
+          <span>ПК7 (600-700м)</span>
+          <span>ПК8 (700-800м)</span>
+          <span>ПК9 (800-900м)</span>
+          <span>ПК10 (900-1000м)</span>
+        </div>
+
+        <div class="relative min-w-[700px] py-6 space-y-8 rail-track-pattern">
+          
+          <!-- LEFT RAIL (Зүүн жирээ) -->
+          <div class="relative flex items-center">
+            <span class="absolute -left-2 -top-5 text-[10px] font-semibold text-sky-400 uppercase tracking-wider flex items-center gap-1">
+              <i class="fa-solid fa-arrow-left"></i> Зүүн жирээ ( Left Rail )
+            </span>
+            <!-- Rail Steel Bar -->
+            <div class="w-full h-3 bg-slate-700 rounded border border-slate-600 relative shadow-inner">
+              <div class="absolute inset-y-0 left-0 bg-sky-500/20 w-full"></div>
+            </div>
+            <!-- Left Rail Defect Nodes Container -->
+            <div id="left-rail-nodes" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+
+          <!-- Sleepers / Ties Graphic Line -->
+          <div class="h-2 flex justify-between items-center opacity-30 px-1 min-w-[700px]">
+            <div id="sleepers-container" class="w-full flex justify-between"></div>
+          </div>
+
+          <!-- RIGHT RAIL (Баруун жирээ) -->
+          <div class="relative flex items-center">
+            <span class="absolute -left-2 -bottom-5 text-[10px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+              <i class="fa-solid fa-arrow-right"></i> Баруун жирээ ( Right Rail )
+            </span>
+            <!-- Rail Steel Bar -->
+            <div class="w-full h-3 bg-slate-700 rounded border border-slate-600 relative shadow-inner">
+              <div class="absolute inset-y-0 left-0 bg-emerald-500/20 w-full"></div>
+            </div>
+            <!-- Right Rail Defect Nodes Container -->
+            <div id="right-rail-nodes" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+
+        </div>
+
+        <!-- Diagram Legend -->
+        <div class="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 mt-4 border-t border-slate-800/80 pt-2">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-red-500 border border-white/40 inline-block"></span>
+            <span>Остродефект (ОП/ДП - Аюултай)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-amber-400 border border-white/40 inline-block"></span>
+            <span>Дефект 53 / 53.1 (Боолтны нүх)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-indigo-400 border border-white/40 inline-block"></span>
+            <span>Дефект 17.1 / 17.2 (Толгой)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-sky-400 border border-white/40 inline-block"></span>
+            <span>Бусад гэмтэл (21, 30, 52)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ultrasonic Signal Waveform Modal Viewer Card -->
+    <section id="signal-viewer-card" class="bg-slate-900 border border-slate-800 rounded-xl p-4 hidden transition duration-300">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+        <h3 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-yellow-400"></i> Сонгосон Гэмтлийн Ультразвук Импульсийн Осциллограмм (A-Scan / B-Scan)
+        </h3>
+        <button onclick="closeSignalViewer()" class="text-slate-400 hover:text-white text-xs">
+          <i class="fa-solid fa-xmark"></i> Хаах
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2 bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <canvas id="ultrasonicCanvas" class="w-full h-48 bg-slate-950 rounded"></canvas>
+        </div>
+        <div class="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50 text-xs space-y-2">
+          <div id="signal-details" class="space-y-1 text-slate-300">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Controls & Defect Directory Table -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
+      <!-- Defect Classification Directory Quick Info Panel -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+        <div>
+          <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-book-bookmark text-amber-400"></i> НТД/ЦП Нэгдсэн Ангилал
+          </h3>
+          <p class="text-xs text-slate-400 mb-3">РДМ-22 тэргэнцэрээр илрүүлэх стандарт кодууд:</p>
+          
+          <div class="space-y-2 text-xs custom-scrollbar overflow-y-auto max-h-[300px] pr-1">
+            <div class="p-2 bg-slate-800/60 rounded border border-slate-700/60 hover:border-amber-500/50 transition">
+              <div class="flex justify-between font-bold text-amber-300">
+                <span>Код 53.1 / 53.2</span>
+                <span class="text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-400">Боолтны нүх</span>
+              </div>
+              <p class="text-slate-300 text-[11px] mt-0.5">Боолтны нүхнээс эхэлсэн нугаларалт, диагональ ба хэвтээ цав.</p>
+              <div class="text-[10px] text-slate-500 mt-1">Суваг: 58°, 70° / РДМ дохио: Эхо ба акус.</div>
+            </div>
+
+            <div class="p-2 bg-slate-800/60 rounded border border-slate-700/60 hover:border-indigo-500/50 transition">
+              <div class="flex justify-between font-bold text-indigo-300">
+                <span>Код 17.1 / 17.2</span>
+                <span class="text-[10px] bg-indigo-500/20 px-1.5 py-0.5 rounded text-indigo-400">Толгойн цав</span>
+              </div>
+              <p class="text-slate-300 text-[11px] mt-0.5">Толгойн доторх хэвтээ болон босоо дагуух цав.</p>
+              <div class="text-[10px] text-slate-500 mt-1">Суваг: 42°, 70° / РДМ дохио: Толин-эхо.</div>
+            </div>
+
+            <div class="p-2 bg-slate-800/60 rounded border border-slate-700/60 hover:border-sky-500/50 transition">
+              <div class="flex justify-between font-bold text-sky-300">
+                <span>Код 21.1 / 21.2</span>
+                <span class="text-[10px] bg-sky-500/20 px-1.5 py-0.5 rounded text-sky-400">Ажлын гадаргуу</span>
+              </div>
+              <p class="text-slate-300 text-[11px] mt-0.5">Толгойн гадаргуугийн хотолж ховилогдох, ховхрох гэмтэл.</p>
+            </div>
+
+            <div class="p-2 bg-slate-800/60 rounded border border-slate-700/60 hover:border-emerald-500/50 transition">
+              <div class="flex justify-between font-bold text-emerald-300">
+                <span>Код 30.1 / 52 / 66</span>
+                <span class="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-400">Ул / Иш / Залгаас</span>
+              </div>
+              <p class="text-slate-300 text-[11px] mt-0.5">Иш болон улын зэврэлт, гагнуурын залгаасын дутагдал.</p>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="openNewDefectModal()" class="w-full mt-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-sky-500/30 font-medium text-xs rounded-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-pen-to-square"></i> Шинэ Гэмтэл Гардан Бүртгэх
+        </button>
+      </div>
+
+      <!-- Main Interactive Defect Table -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-sky-400"></i> Илрүүлсэн Гэмтлүүдийн Жагсаалт
+            </h3>
+            
+            <!-- Filters & Search -->
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <input type="text" id="search-input" onkeyup="filterDefects()" placeholder="Км, ПК эсвэл Код хайх..." class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2.5 py-1 outline-none focus:border-sky-500 w-full sm:w-40">
+              
+              <select id="filter-side" onchange="filterDefects()" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2 py-1 outline-none focus:border-sky-500">
+                <option value="all">Бүх жирээ</option>
+                <option value="Зүүн">Зүүн жирээ</option>
+                <option value="Баруун">Баруун жирээ</option>
+              </select>
+
+              <select id="filter-danger" onchange="filterDefects()" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2 py-1 outline-none focus:border-sky-500">
+                <option value="all">Бүх аюул</option>
+                <option value="ОП/ДП">ОП / ДП</option>
+                <option value="Д">Дефект (Д)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Table element -->
+          <div class="overflow-x-auto custom-scrollbar border border-slate-800 rounded-lg max-h-[360px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800">
+                <tr>
+                  <th class="p-2.5 font-semibold">Жирээ</th>
+                  <th class="p-2.5 font-semibold">Байршил (Км / ПК / м / мм)</th>
+                  <th class="p-2.5 font-semibold">Гэмтлийн Код</th>
+                  <th class="p-2.5 font-semibold">Хэмжээ (Ухг)</th>
+                  <th class="p-2.5 font-semibold">Суваг</th>
+                  <th class="p-2.5 font-semibold">Аюул</th>
+                  <th class="p-2.5 font-semibold text-right">Үйлдэл</th>
+                </tr>
+              </thead>
+              <tbody id="defect-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-3 flex justify-between items-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-2">
+          <span>Харуулж буй бичлэг: <span id="visible-count" class="text-slate-300 font-semibold">0</span></span>
+          <span class="italic">РДМ-22 шалгалтын стандарт журнал</span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Modal 1: Register/Edit Defect Modal -->
+  <div id="defect-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-xl p-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+      <button onclick="closeModal('defect-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+        <i class="fa-solid fa-pen-nib text-sky-400"></i> РДМ-22 ГЭМТЭЛ БҮРТГЭХ
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">НТД/ЦП Ангилалтын дагуу рэльсийн гэмтлийн параметер оруулах</p>
+
+      <form id="defect-form" onsubmit="saveDefect(event)" class="space-y-4">
+        <input type="hidden" id="edit-id" value="">
+
+        <!-- Quick Select Buttons for Common Defect Codes -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Түгээмэл Кодууд Нийтлэг (Түргэн сонгох):</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="quickSelectCode('53.1')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs transition">
+              53.1 (Боолтны нүх)
+            </button>
+            <button type="button" onclick="quickSelectCode('53.2')" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs transition">
+              53.2 (Нүхний цав)
+            </button>
+            <button type="button" onclick="quickSelectCode('17.1')" class="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs transition">
+              17.1 (Толгойн хэвтээ)
+            </button>
+            <button type="button" onclick="quickSelectCode('17.2')" class="px-2.5 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-xs transition">
+              17.2 (Толгойн босоо)
+            </button>
+            <button type="button" onclick="quickSelectCode('21.1')" class="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded text-xs transition">
+              21.1 (Ажлын гадаргуу)
+            </button>
+            <button type="button" onclick="quickSelectCode('30.1')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs transition">
+              30.1 (Иш)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Side -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Жирээ / Сүм (Тап)</label>
+            <select id="form-side" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+              <option value="Зүүн">Зүүн жирээ (Left Rail)</option>
+              <option value="Баруун">Баруун жирээ (Right Rail)</option>
+            </select>
+          </div>
+
+          <!-- Code -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Гэмтлийн Код (НТД)</label>
+            <input type="text" id="form-code" placeholder="Жишээ: 53.1" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+        </div>
+
+        <!-- Location Parameters -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">КМ (Километр)</label>
+            <input type="number" id="form-km" value="124" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">ПК (Пикет 1-10)</label>
+            <input type="number" id="form-pk" min="1" max="10" value="3" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Метр (м)</label>
+            <input type="number" id="form-meter" min="0" max="100" value="45" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-medium text-slate-400 mb-1">Зай / Төгсгөл (мм)</label>
+            <input type="number" id="form-mm" value="320" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+        </div>
+
+        <!-- Dimensions -->
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Урт (мм)</label>
+            <input type="number" id="form-length" placeholder="мм" value="25" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Гүн (мм)</label>
+            <input type="number" id="form-depth" placeholder="мм" value="8" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Өргөн (мм)</label>
+            <input type="number" id="form-width" placeholder="мм" value="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 text-xs outline-none focus:border-sky-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- RDM Sensor Channel -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">РДМ-22 Ультразвук Суваг</label>
+            <select id="form-channel" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs outline-none focus:border-sky-500">
+              <option value="58° (Боолтны нүх / Толгойн цав)">58° (Боолтны нүх/Иш)</option>
+              <option value="70° (Толгойн хэвтээ цав)">70° (Толгойн хэвтээ цав)</option>
+              <option value="42° (Толгойн босоо цав)">42° (Толгойн босоо цав)</option>
+              <option value="0° (Нийт зузаан / Эхо дохио)">0° (Шулуун суваг)</option>
+            </select>
+          </div>
+
+          <!-- Danger Level -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Аюулын Зэрэг (Ангилал)</label>
+            <select id="form-danger" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs outline-none focus:border-sky-500">
+              <option value="ОП/ДП">ОП / ДП (Дефект бөгөөд Нэн Аюултай)</option>
+              <option value="Д">Д (Дефект / Хяналтанд авах)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description / Note -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Тайлбар / Авсан арга хэмжээ</label>
+          <input type="text" id="form-action" placeholder="Жишээ: Хурд 25км/ч хязгаарлав, Нэн даруй солих шаардлагатай" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs outline-none focus:border-sky-500">
+        </div>
+
+        <!-- Form Buttons -->
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeModal('defect-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition">Цуцлах</button>
+          <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg shadow-md transition">Хадгалах</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Advanced RDM Log File Parser / Drag and Drop Upload Modal -->
+  <div id="log-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg p-5 shadow-2xl relative">
+      <button onclick="closeModal('log-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-200">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <h3 class="text-base font-bold text-white flex items-center gap-2 mb-1">
+        <i class="fa-solid fa-microchip text-sky-400"></i> РДМ-22 Лог / Файл Уншуулах
+      </h3>
+      <p class="text-xs text-slate-400 mb-4">КМ/ПК баганатай текстэн .CSV, .TXT, .LOG файлыг импортлоно. Бинар .RDM/.DAT файлыг энэ хувилбар тайлахгүй.</p>
+
+      <!-- Drag & Drop Zone -->
+      <input type="file" id="rdm-file-input" class="sr-only" accept=".rdm,.dat,.log,.txt,.csv" onchange="handleFileSelect(event)">
+      <label id="drop-zone" for="rdm-file-input"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleFileDrop(event)"
+             class="border-2 border-dashed border-slate-700 hover:border-sky-500 bg-slate-950/60 rounded-xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center space-y-3 group">
+
+        <div class="w-14 h-14 rounded-full bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/30 group-hover:scale-110 transition">
+          <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+        </div>
+        
+        <div>
+          <p class="text-sm font-semibold text-slate-200">Файлаа чирж оруулна уу эсвэл <span class="text-sky-400 underline">сонгоно уу</span></p>
+          <p class="text-[11px] text-slate-400 mt-1">Файлын төрөл: .CSV, .TXT, .LOG; бинар .RDM/.DAT одоогоор дэмжигдээгүй</p>
+        </div>
+      </label>
+
+      <!-- Import Progress / Status Info -->
+      <div id="upload-status" class="mt-4 hidden p-3 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
+        <div class="flex items-center justify-between text-sky-400 font-semibold mb-1">
+          <span id="upload-filename">Файл уншиж байна...</span>
+          <span id="upload-percentage">0%</span>
+        </div>
+        <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+          <div id="upload-progress-bar" class="bg-sky-500 h-full w-0 transition-all duration-200"></div>
+        </div>
+      </div>
+
+      <!-- Quick Demo File Load Button -->
+      <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+        <button type="button" onclick="loadDemoRdmLog()" class="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1.5">
+          <i class="fa-solid fa-flask"></i> Туршилтын Демо Лог ачаалах
+        </button>
+        <button onclick="closeModal('log-modal')" class="px-4 py-1.5 bg-slate-800 text-slate-300 text-xs rounded-lg hover:bg-slate-700 transition">Хаах</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global Defect Dataset
+    let defectsData = [
+      {
+        id: 'rdm-101',
+        side: 'Зүүн',
+        km: 124,
+        pk: 3,
+        meter: 42,
+        mm: 150,
+        code: '53.1',
+        name: 'Боолтны нүхний цав',
+        length: 35,
+        depth: 12,
+        width: 3,
+        channel: '58° (Боолтны нүх / Толгойн цав)',
+        danger: 'ОП/ДП',
+        action: 'Хурд 15км/ч хязгаарлав. Солих даалгавар өгөв.',
+        signalData: [10, 15, 25, 80, 95, 40, 15, 5, 0]
+      },
+      {
+        id: 'rdm-102',
+        side: 'Баруун',
+        km: 124,
+        pk: 3,
+        meter: 78,
+        mm: 400,
+        code: '17.1',
+        name: 'Толгойн хэвтээ цав',
+        length: 18,
+        depth: 6,
+        width: 2,
+        channel: '70° (Толгойн хэвтээ цав)',
+        danger: 'Д',
+        action: 'Тогтмол ультразвук хяналтад авав.',
+        signalData: [5, 10, 30, 60, 45, 20, 5, 0]
+      },
+      {
+        id: 'rdm-103',
+        side: 'Зүүн',
+        km: 124,
+        pk: 7,
+        meter: 15,
+        mm: 80,
+        code: '21.1',
+        name: 'Гадаргуугийн хотолж ховилогдох',
+        length: 45,
+        depth: 4,
+        width: 10,
+        channel: '0° (Нийт зузаан / Эхо дохио)',
+        danger: 'Д',
+        action: 'Зүлгүүр хийх шаардлагатай',
+        signalData: [2, 5, 12, 35, 20, 8, 2]
+      },
+      {
+        id: 'rdm-104',
+        side: 'Баруун',
+        km: 124,
+        pk: 9,
+        meter: 92,
+        mm: 610,
+        code: '53.2',
+        name: 'Боолтны нүхний диагональ цав',
+        length: 50,
+        depth: 15,
+        width: 4,
+        channel: '58° (Боолтны нүх / Толгойн цав)',
+        danger: 'ОП/ДП',
+        action: 'Нэн даруй хавтангаар бэхлэх эсвэл залгаас засах.',
+        signalData: [15, 30, 70, 100, 85, 50, 10]
+      }
+    ];
+
+    let currentSignalChart = null;
+
+    // Initialize Application
+    window.onload = function() {
+      renderSleepers();
+      updateKmFilterOptions();
+      renderTrackBlueprint();
+      renderTable();
+      updateKPIs();
+    };
+
+    // Render graphic sleeper background lines
+    function renderSleepers() {
+      const container = document.getElementById('sleepers-container');
+      if (!container) return;
+      container.innerHTML = '';
+      for (let i = 0; i < 35; i++) {
+        const sleeper = document.createElement('div');
+        sleeper.className = 'w-1 h-5 bg-amber-800/40 rounded-sm';
+        container.appendChild(sleeper);
+      }
+    }
+
+    // Populate Dynamic KM Filter Options
+    function updateKmFilterOptions() {
+      const filterSelect = document.getElementById('km-filter');
+      const currentVal = filterSelect.value || 'all';
+      
+      const uniqueKms = [...new Set(defectsData.map(d => d.km))].sort((a, b) => a - b);
+      
+      filterSelect.innerHTML = '<option value="all">Бүх КМ-ээр</option>';
+      uniqueKms.forEach(km => {
+        const opt = document.createElement('option');
+        opt.value = km;
+        opt.innerText = `${km}-р КМ`;
+        filterSelect.appendChild(opt);
+      });
+
+      if (uniqueKms.includes(parseInt(currentVal))) {
+        filterSelect.value = currentVal;
+      } else if (uniqueKms.length > 0) {
+        filterSelect.value = uniqueKms[0];
+      } else {
+        filterSelect.value = 'all';
+      }
+    }
+
+    // Render Visual Track Map Blueprint
+    function renderTrackBlueprint() {
+      const leftContainer = document.getElementById('left-rail-nodes');
+      const rightContainer = document.getElementById('right-rail-nodes');
+      const selectedKm = document.getElementById('km-filter').value;
+
+      leftContainer.innerHTML = '';
+      rightContainer.innerHTML = '';
+
+      const filtered = defectsData.filter(d => selectedKm === 'all' || d.km == selectedKm);
+
+      filtered.forEach(d => {
+        const totalMeters = ((d.pk - 1) * 100) + d.meter;
+        const leftPercent = Math.min(Math.max((totalMeters / 1000) * 100, 2), 98);
+
+        const node = document.createElement('div');
+        node.className = `absolute top-1/2 -translate-y-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto group z-10`;
+        node.style.left = `${leftPercent}%`;
+        node.onclick = () => showSignalViewer(d.id);
+
+        let colorClass = 'bg-sky-400 border-white';
+        if (d.danger === 'ОП/ДП') {
+          colorClass = 'bg-red-500 border-white pulsate-danger';
+        } else if (d.code.startsWith('53')) {
+          colorClass = 'bg-amber-400 border-slate-900';
+        } else if (d.code.startsWith('17')) {
+          colorClass = 'bg-indigo-400 border-white';
+        }
+
+        node.innerHTML = `
+          <div class="w-4 h-4 rounded-full ${colorClass} border-2 shadow-lg flex items-center justify-center text-[9px] font-bold text-slate-900 hover:scale-125 transition">
+          </div>
+          <!-- Tooltip on Hover -->
+          <div class="opacity-0 group-hover:opacity-100 transition duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-950 text-slate-100 text-[11px] rounded-lg p-2 border border-slate-700 shadow-2xl pointer-events-none z-30">
+            <div class="font-bold text-sky-400 border-b border-slate-800 pb-1 mb-1 flex justify-between">
+              <span>Код ${d.code}</span>
+              <span class="text-slate-400 text-[9px]">${d.side}</span>
+            </div>
+            <div>КМ: ${d.km} | ПК: ${d.pk} | ${d.meter}м ${d.mm}мм</div>
+            <div>Урт: <span class="text-amber-300 font-semibold">${d.length}мм</span> | Гүн: ${d.depth || 0}мм</div>
+            <div class="text-[10px] text-red-400 mt-1 font-semibold">${d.danger} - ${d.action}</div>
+            <div class="text-[9px] text-sky-400 mt-1 italic">Дарж ультразвук сигнал харах</div>
+          </div>
+        `;
+
+        if (d.side === 'Зүүн') {
+          leftContainer.appendChild(node);
+        } else {
+          rightContainer.appendChild(node);
+        }
+      });
+    }
+
+    // Display Ultrasonic A-Scan Signal Waveform
+    function showSignalViewer(id) {
+      const item = defectsData.find(d => d.id === id);
+      if (!item) return;
+
+      const card = document.getElementById('signal-viewer-card');
+      card.classList.remove('hidden');
+
+      const infoContainer = document.getElementById('signal-details');
+      infoContainer.innerHTML = `
+        <div class="font-bold text-sky-400 text-sm">Код: ${item.code} - ${item.name}</div>
+        <div><strong>Байршил:</strong> ${item.km}км, ПК${item.pk}, ${item.meter}м ${item.mm}мм (${item.side} жирээ)</div>
+        <div><strong>Суваг:</strong> ${item.channel}</div>
+        <div><strong>Хэмжээ:</strong> Урт ${item.length}мм | Гүн ${item.depth || 0}мм</div>
+        <div><strong>Аюулын зэрэг:</strong> <span class="text-red-400 font-bold">${item.danger}</span></div>
+        <div class="text-[10px] text-slate-400 mt-2 border-t border-slate-700 pt-1">Арга хэмжээ: ${item.action}</div>
+      `;
+
+      // Draw Chart.js Waveform
+      const ctx = document.getElementById('ultrasonicCanvas').getContext('2d');
+      if (currentSignalChart) {
+        currentSignalChart.destroy();
+      }
+
+      const signalArray = item.signalData || [5, 10, 20, 85, 60, 25, 10, 0];
+      const labels = signalArray.map((_, idx) => `${idx * 10} мкс`);
+
+      currentSignalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Ультразвук Импульсийн Далайц (A-Scan %)',
+            data: signalArray,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: '#f59e0b',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            },
+            x: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8' }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#f8fafc', font: { size: 11 } } }
+          }
+        }
+      });
+
+      card.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closeSignalViewer() {
+      document.getElementById('signal-viewer-card').classList.add('hidden');
+    }
+
+    // Render Table
+    function renderTable(dataToRender = defectsData) {
+      const tbody = document.getElementById('defect-table-body');
+      const visibleCount = document.getElementById('visible-count');
+      tbody.innerHTML = '';
+
+      visibleCount.innerText = dataToRender.length;
+
+      if (dataToRender.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-6 text-slate-500 italic">
+              Илрүүлсэн гэмтэл бүртгэгдээгүй байна.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      dataToRender.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/50 transition cursor-pointer';
+
+        const isDanger = d.danger === 'ОП/ДП';
+        const dangerBadge = isDanger 
+          ? `<span class="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded font-bold text-[10px]">ОП/ДП</span>`
+          : `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px]">Д</span>`;
+
+        const sideBadge = d.side === 'Зүүн'
+          ? `<span class="text-sky-400 font-medium"><i class="fa-solid fa-arrow-left text-[10px] me-1"></i>Зүүн</span>`
+          : `<span class="text-emerald-400 font-medium"><i class="fa-solid fa-arrow-right text-[10px] me-1"></i>Баруун</span>`;
+
+        tr.innerHTML = `
+          <td class="p-2.5" onclick="showSignalViewer('${d.id}')">${sideBadge}</td>
+          <td class="p-2.5 font-mono text-slate-200" onclick="showSignalViewer('${d.id}')">
+            <span class="font-bold text-sky-300">${d.km}КМ</span> / ПК${d.pk} / ${d.meter}м ${d.mm}мм
+          </td>
+          <td class="p-2.5" onclick="showSignalViewer('${d.id}')">
+            <span class="font-bold text-amber-300 me-1">Код ${d.code}</span>
+            <span class="text-slate-400 text-[10px] block">${d.name || ''}</span>
+          </td>
+          <td class="p-2.5 font-mono" onclick="showSignalViewer('${d.id}')">
+            ${d.length}мм <span class="text-slate-500 text-[10px]">(гүн: ${d.depth || 0}мм)</span>
+          </td>
+          <td class="p-2.5 text-slate-400 text-[11px]" onclick="showSignalViewer('${d.id}')">${d.channel || '-'}</td>
+          <td class="p-2.5" onclick="showSignalViewer('${d.id}')">${dangerBadge}</td>
+          <td class="p-2.5 text-right space-x-1">
+            <button onclick="showSignalViewer('${d.id}')" class="p-1.5 text-slate-400 hover:text-amber-400 transition" title="Сигнал харах">
+              <i class="fa-solid fa-wave-square"></i>
+            </button>
+            <button onclick="editDefect('${d.id}')" class="p-1.5 text-slate-400 hover:text-sky-400 transition" title="Засах">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button onclick="deleteDefect('${d.id}')" class="p-1.5 text-slate-400 hover:text-red-400 transition" title="Устгах">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Update KPI Dashboard
+    function updateKPIs() {
+      document.getElementById('kpi-total').innerText = defectsData.length;
+      
+      const leftCnt = defectsData.filter(d => d.side === 'Зүүн').length;
+      const rightCnt = defectsData.filter(d => d.side === 'Баруун').length;
+      document.getElementById('kpi-left-cnt').innerText = leftCnt;
+      document.getElementById('kpi-right-cnt').innerText = rightCnt;
+
+      const opCnt = defectsData.filter(d => d.danger === 'ОП/ДП').length;
+      document.getElementById('kpi-op').innerText = opCnt;
+
+      const code53Cnt = defectsData.filter(d => d.code.startsWith('53')).length;
+      document.getElementById('kpi-code53').innerText = code53Cnt;
+
+      const code17Cnt = defectsData.filter(d => d.code.startsWith('17')).length;
+      document.getElementById('kpi-code17').innerText = code17Cnt;
+    }
+
+    // Filter Table Data
+    function filterDefects() {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const side = document.getElementById('filter-side').value;
+      const danger = document.getElementById('filter-danger').value;
+
+      const filtered = defectsData.filter(d => {
+        const matchesSearch = d.km.toString().includes(search) || 
+                              d.pk.toString().includes(search) || 
+                              d.code.toLowerCase().includes(search) ||
+                              (d.name && d.name.toLowerCase().includes(search));
+        
+        const matchesSide = (side === 'all') || (d.side === side);
+        const matchesDanger = (danger === 'all') || (d.danger === danger);
+
+        return matchesSearch && matchesSide && matchesDanger;
+      });
+
+      renderTable(filtered);
+    }
+
+    // Modal Operations
+    function openNewDefectModal() {
+      document.getElementById('edit-id').value = '';
+      document.getElementById('defect-form').reset();
+      document.getElementById('defect-modal').classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    function openLogImportModal() {
+      document.getElementById('log-modal').classList.remove('hidden');
+      document.getElementById('upload-status').classList.add('hidden');
+      document.getElementById('rdm-file-input').value = '';
+    }
+
+    // Quick Select Code helper
+    function quickSelectCode(code) {
+      document.getElementById('form-code').value = code;
+    }
+
+    // Save Defect (Create / Edit)
+    function saveDefect(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('edit-id').value;
+      const side = document.getElementById('form-side').value;
+      const code = document.getElementById('form-code').value.trim();
+      const km = parseInt(document.getElementById('form-km').value) || 0;
+      const pk = parseInt(document.getElementById('form-pk').value) || 1;
+      const meter = parseInt(document.getElementById('form-meter').value) || 0;
+      const mm = parseInt(document.getElementById('form-mm').value) || 0;
+      const length = parseInt(document.getElementById('form-length').value) || 0;
+      const depth = parseInt(document.getElementById('form-depth').value) || 0;
+      const width = parseInt(document.getElementById('form-width').value) || 0;
+      const channel = document.getElementById('form-channel').value;
+      const danger = document.getElementById('form-danger').value;
+      const action = document.getElementById('form-action').value || 'Хянаж байна';
+
+      let name = 'Тодорхойгүй гэмтэл';
+      if (code.startsWith('53')) name = 'Боолтны нүхний цав';
+      else if (code.startsWith('17')) name = 'Толгойн цав';
+      else if (code.startsWith('21')) name = 'Гадаргуугийн ховилолт';
+      else if (code.startsWith('30')) name = 'Ишний гэмтэл';
+
+      if (editId) {
+        const index = defectsData.findIndex(d => d.id === editId);
+        if (index !== -1) {
+          defectsData[index] = {
+            ...defectsData[index],
+            side, km, pk, meter, mm, code, name, length, depth, width, channel, danger, action
+          };
+        }
+      } else {
+        const newObj = {
+          id: 'rdm-' + Date.now(),
+          side, km, pk, meter, mm, code, name, length, depth, width, channel, danger, action,
+          signalData: [10, 20, 50, 90, 70, 30, 10, 0]
+        };
+        defectsData.unshift(newObj);
+      }
+
+      closeModal('defect-modal');
+      updateKmFilterOptions();
+      renderTrackBlueprint();
+      renderTable();
+      updateKPIs();
+    }
+
+    // Edit Defect Trigger
+    function editDefect(id) {
+      const item = defectsData.find(d => d.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item.id;
+      document.getElementById('form-side').value = item.side;
+      document.getElementById('form-code').value = item.code;
+      document.getElementById('form-km').value = item.km;
+      document.getElementById('form-pk').value = item.pk;
+      document.getElementById('form-meter').value = item.meter;
+      document.getElementById('form-mm').value = item.mm;
+      document.getElementById('form-length').value = item.length;
+      document.getElementById('form-depth').value = item.depth || 0;
+      document.getElementById('form-width').value = item.width || 0;
+      document.getElementById('form-channel').value = item.channel;
+      document.getElementById('form-danger').value = item.danger;
+      document.getElementById('form-action').value = item.action || '';
+
+      document.getElementById('defect-modal').classList.remove('hidden');
+    }
+
+    // Delete Defect
+    function deleteDefect(id) {
+      defectsData = defectsData.filter(d => d.id !== id);
+      updateKmFilterOptions();
+      renderTrackBlueprint();
+      renderTable();
+      updateKPIs();
+    }
+
+    // --- REAL FILE UPLOAD & DRAG & DROP PARSER LOGIC ---
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('drop-zone').classList.add('border-sky-500', 'bg-sky-500/10');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('drop-zone').classList.remove('border-sky-500', 'bg-sky-500/10');
+    }
+
+    function handleFileDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('drop-zone').classList.remove('border-sky-500', 'bg-sky-500/10');
+
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        processUploadedFile(files[0]);
+      } else {
+        showUploadMessage('Чирж оруулсан файл олдсонгүй.', true);
+      }
+    }
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        processUploadedFile(files[0]);
+      } else {
+        showUploadMessage('Файл сонгогдсонгүй.', true);
+      }
+      e.target.value = '';
+    }
+
+    function showUploadMessage(message, isError = false) {
+      const statusBox = document.getElementById('upload-status');
+      const filenameLabel = document.getElementById('upload-filename');
+      const percentageLabel = document.getElementById('upload-percentage');
+      const progressBar = document.getElementById('upload-progress-bar');
+      statusBox.classList.remove('hidden');
+      filenameLabel.innerText = message;
+      percentageLabel.innerText = isError ? 'Алдаа' : '100%';
+      progressBar.style.width = '100%';
+      progressBar.classList.toggle('bg-red-500', isError);
+      progressBar.classList.toggle('bg-sky-500', !isError);
+    }
+
+    function decodeRdmText(bytes) {
+      const sampleLength = Math.min(bytes.length, 4096);
+      let nullBytes = 0;
+      let evenNulls = 0;
+      let oddNulls = 0;
+      for (let index = 0; index < sampleLength; index++) {
+        if (bytes[index] === 0) {
+          nullBytes++;
+          if (index % 2 === 0) evenNulls++;
+          else oddNulls++;
+        }
+      }
+
+      let encoding = 'utf-8';
+      let skipBom = 0;
+      if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        encoding = 'utf-16le';
+        skipBom = 2;
+      } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+        encoding = 'utf-16be';
+        skipBom = 2;
+      } else if (sampleLength && oddNulls > sampleLength * 0.2 && evenNulls < sampleLength * 0.05) {
+        encoding = 'utf-16le';
+      } else if (sampleLength && evenNulls > sampleLength * 0.2 && oddNulls < sampleLength * 0.05) {
+        encoding = 'utf-16be';
+      } else if (sampleLength && nullBytes > sampleLength * 0.05) {
+        return null;
+      }
+
+      let text = new TextDecoder(encoding).decode(bytes.subarray(skipBom));
+      if (encoding === 'utf-8' && text.includes('\uFFFD')) {
+        const legacyText = new TextDecoder('windows-1251').decode(bytes);
+        const controlCount = value => (value.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g) || []).length;
+        if (controlCount(legacyText) <= controlCount(text)) text = legacyText;
+      }
+      const controlCount = (text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g) || []).length;
+      return text.length && controlCount > text.length * 0.05 ? null : text;
+    }
+
+    function processUploadedFile(file) {
+      const statusBox = document.getElementById('upload-status');
+      const filenameLabel = document.getElementById('upload-filename');
+      const percentageLabel = document.getElementById('upload-percentage');
+      const progressBar = document.getElementById('upload-progress-bar');
+      const showUploadError = message => {
+        filenameLabel.innerText = message;
+        percentageLabel.innerText = 'Алдаа';
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('bg-sky-500');
+        progressBar.classList.add('bg-red-500');
+      };
+
+      statusBox.classList.remove('hidden');
+      filenameLabel.innerText = `Уншиж байна: ${file.name}`;
+      progressBar.style.width = '30%';
+      progressBar.classList.remove('bg-red-500');
+      progressBar.classList.add('bg-sky-500');
+      percentageLabel.innerText = '30%';
+
+      if (file.size === 0) {
+        showUploadError('Файл хоосон байна.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.readAsArrayBuffer(file);
+
+      reader.onload = function(e) {
+        progressBar.style.width = '80%';
+        percentageLabel.innerText = '80%';
+
+        try {
+          const text = decodeRdmText(new Uint8Array(e.target.result));
+          if (text === null) {
+            showUploadError('Энэ нь бинар .RDM/.DAT өгөгдөл байна. КМ/ПК-г эх файлд баттай унших бүтэц алга тул буруу байршил импортлохоос сэргийлж зогсоолоо. Үйлдвэрлэгчийн CSV/TXT тайланг оруулна уу.');
+            return;
+          }
+
+          const parsedDefects = parseRdmTextLog(text);
+          if (parsedDefects.length > 0) {
+            defectsData = [...parsedDefects, ...defectsData];
+            updateKmFilterOptions();
+            renderTrackBlueprint();
+            renderTable();
+            updateKPIs();
+            
+            progressBar.style.width = '100%';
+            percentageLabel.innerText = '100%';
+            filenameLabel.innerText = `Амжилттай: ${parsedDefects.length} гэмтэл бүртгэгдлээ!`;
+            
+            setTimeout(() => {
+              closeModal('log-modal');
+            }, 1200);
+          } else {
+            showUploadError('КМ, ПК, код, жирээний талын зөв баганатай гэмтлийн мөр олдсонгүй. Текстэн CSV/TXT тайлан ашиглана уу.');
+          }
+        } catch (error) {
+          showUploadError(`Файлыг шалгах үед алдаа гарлаа: ${error.message}`);
+        }
+      };
+
+      reader.onerror = function() {
+        showUploadError(`${file.name} файлыг уншиж чадсангүй.`);
+      };
+
+      reader.onabort = function() {
+        showUploadError(`${file.name} файлыг унших үйлдэл цуцлагдлаа.`);
+      };
+    }
+
+    function normalizeRdmHeader(value) {
+      return String(value).toLowerCase().replace(/[\s_\-()[\]./]+/g, '');
+    }
+
+    function splitRdmDelimitedLine(line, delimiter) {
+      const values = [];
+      let value = '';
+      let quoted = false;
+      for (let index = 0; index < line.length; index++) {
+        const character = line[index];
+        if (character === '"' && quoted && line[index + 1] === '"') {
+          value += '"';
+          index++;
+        } else if (character === '"') {
+          quoted = !quoted;
+        } else if (character === delimiter && !quoted) {
+          values.push(value.trim());
+          value = '';
+        } else {
+          value += character;
+        }
+      }
+      values.push(value.trim());
+      return values;
+    }
+
+    function parseRdmTextLog(textData) {
+      const aliases = {
+        side: ['side', 'rail', 'track', 'жирээ', 'рельс', 'тал'],
+        km: ['km', 'kilometer', 'kilometre', 'километр', 'км'],
+        pk: ['pk', 'picket', 'пикет', 'пк'],
+        meter: ['meter', 'metre', 'метр', 'м'],
+        mm: ['mm', 'миллиметр', 'мм'],
+        code: ['code', 'defectcode', 'код', 'гэмтлийнкод'],
+        name: ['name', 'defectname', 'нэр'],
+        length: ['length', 'урт', 'уртмм'],
+        depth: ['depth', 'гүн', 'гүнмм'],
+        width: ['width', 'өргөн', 'өргөнмм'],
+        channel: ['channel', 'суваг'],
+        danger: ['danger', 'severity', 'аюул', 'аюулынзэрэг'],
+        action: ['action', 'note', 'comment', 'тайлбар']
+      };
+      const lines = textData.replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim() && !line.trimStart().startsWith('#'));
+      if (!lines.length) return [];
+      const delimiters = [',', ';', '\t'];
+      const delimiter = delimiters.reduce((best, candidate) =>
+        lines.slice(0, 20).reduce((count, line) => count + splitRdmDelimitedLine(line, candidate).length - 1, 0) >
+        lines.slice(0, 20).reduce((count, line) => count + splitRdmDelimitedLine(line, best).length - 1, 0) ? candidate : best, ',');
+      const required = ['side', 'km', 'pk', 'code'];
+      const headerIndex = lines.findIndex(line => {
+        const headers = splitRdmDelimitedLine(line, delimiter).map(normalizeRdmHeader);
+        return required.every(field => headers.some(header => aliases[field].includes(header)));
+      });
+      let records;
+      if (headerIndex >= 0) {
+        const headers = splitRdmDelimitedLine(lines[headerIndex], delimiter);
+        records = lines.slice(headerIndex + 1).map(line => {
+          const values = splitRdmDelimitedLine(line, delimiter);
+          return Object.fromEntries(headers.map((header, index) => [normalizeRdmHeader(header), values[index] || '']));
+        });
+      } else {
+        records = lines.map(line => {
+          const values = splitRdmDelimitedLine(line, delimiter);
+          return values.length >= 4
+            ? { km: values[0], pk: values[1], code: values[2], side: values[3], meter: values[4], mm: values[5] }
+            : null;
+        });
+      }
+
+      const results = [];
+      const valueFor = (record, field) => {
+        const key = Object.keys(record).find(candidate => aliases[field].includes(normalizeRdmHeader(candidate)));
+        return key === undefined ? '' : record[key];
+      };
+      const numberFor = (value, fallback) => {
+        if (value === '' || value === null || value === undefined) return fallback;
+        const parsed = Number(String(value).trim().replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : NaN;
+      };
+
+      records.forEach((record, index) => {
+        if (!record) return;
+        const km = numberFor(valueFor(record, 'km'), NaN);
+        const pk = numberFor(valueFor(record, 'pk'), NaN);
+        const meter = numberFor(valueFor(record, 'meter'), 0);
+        const mm = numberFor(valueFor(record, 'mm'), 0);
+        const length = numberFor(valueFor(record, 'length'), 0);
+        const depth = numberFor(valueFor(record, 'depth'), 0);
+        const width = numberFor(valueFor(record, 'width'), 0);
+        const sideValue = String(valueFor(record, 'side')).trim().toLowerCase();
+        const side = ['зүүн', 'left', 'l', 'лев', 'левая'].some(value => sideValue === value || sideValue.includes(`${value} `)) ? 'Зүүн'
+          : ['баруун', 'right', 'r', 'прав', 'правая'].some(value => sideValue === value || sideValue.includes(`${value} `)) ? 'Баруун' : '';
+        const code = String(valueFor(record, 'code')).trim();
+        if (!side || !Number.isInteger(km) || km < 0 || !Number.isInteger(pk) || pk < 1 || pk > 10 ||
+            !Number.isFinite(meter) || meter < 0 || meter > 100 || !Number.isFinite(mm) || mm < 0 ||
+            !Number.isFinite(length) || length < 0 || !Number.isFinite(depth) || depth < 0 ||
+            !Number.isFinite(width) || width < 0 || !code) return;
+        const dangerValue = String(valueFor(record, 'danger')).trim().toUpperCase();
+        results.push({
+          id: `rdm-txt-${Date.now()}-${index}`,
+          side, km, pk, meter, mm, code,
+          name: String(valueFor(record, 'name') || 'Импортолсон гэмтэл'),
+          length, depth, width,
+          channel: String(valueFor(record, 'channel') || ''),
+          danger: /ОП|ДП|URGENT|CRITICAL/.test(dangerValue) ? 'ОП/ДП' : 'Д',
+          action: String(valueFor(record, 'action') || 'Текстэн лог файлаас импортлов'),
+          signalData: [15, 35, 80, 60, 20, 5]
+        });
+      });
+
+      return results;
+    }
+
+    // Demo File Direct Loader Button
+    function loadDemoRdmLog() {
+      const demoData = `124, 2, 53.1, Зүүн\n124, 5, 17.2, Баруун\n125, 1, 21.1, Зүүн`;
+      const parsed = parseRdmTextLog(demoData);
+      
+      defectsData = [...parsed, ...defectsData];
+      updateKmFilterOptions();
+      renderTrackBlueprint();
+      renderTable();
+      updateKPIs();
+      closeModal('log-modal');
+    }
+
+    // Export Data to CSV
+    function exportCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "ID,Жирээ,КМ,ПК,Метр,ММ,Код,Нэр,Урт(мм),Гүн(мм),Суваг,Аюул,Авсан Арга хэмжээ\n";
+
+      defectsData.forEach(d => {
+        const row = [
+          d.id,
+          d.side,
+          d.km,
+          d.pk,
+          d.meter,
+          d.mm,
+          d.code,
+          `"${d.name || ''}"`,
+          d.length,
+          d.depth || 0,
+          `"${d.channel || ''}"`,
+          d.danger,
+          `"${d.action || ''}"`
+        ].join(",");
+        csvContent += row + "\n";
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `RDM22_Railway_Defects_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Export Data to JSON
+    function exportJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(defectsData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `RDM22_Export_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+  </script>
+</body>
+</html>
